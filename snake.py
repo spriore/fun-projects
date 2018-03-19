@@ -1,15 +1,15 @@
 import tkinter as tk
 from random import randrange
-from numpy import linspace as linear
+import queue
 
 class Application:
 	def __init__( self ):
-		self.self.scale 		= 13 # No of columns and rows in the grid
-		self.b_dim 		= 40 # Size of each square
-		self.c_dim 		= self.self.scale * self.b_dim
-		self.bound 		= self.c_dim - self.b_dim
-		self.center 	= int( self.self.scale / 2 ) * self.b_dim
-		self.win_con	= self.self.scale**2 - 1
+		self.scale 	= 13 # No of columns and rows in the grid
+		self.b_dim 	= 40 # Size of each square
+		self.c_dim 	= self.scale * self.b_dim
+		self.bound 	= self.c_dim - self.b_dim
+		self.center 	= int( self.scale / 2 ) * self.b_dim
+		self.win_con	= self.scale**2 - 1
 		self.run 		= False
 		
 		self.root 	= tk.Tk()
@@ -18,12 +18,13 @@ class Application:
 		self.l.pack()
 		self.c.pack()
 			
+		self.queue = queue.Queue()
 		
-		self.root.bind('<space>', 	lambda e: self.start_game())
-		self.root.bind('<Left>', 	lambda e: self.new_dir([-1,0]))
-		self.root.bind('<Right>', 	lambda e: self.new_dir([1,0]))
-		self.root.bind('<Up>', 		lambda e: self.new_dir([0,-1]))
-		self.root.bind('<Down>', 	lambda e: self.new_dir([0,1]))
+		self.root.bind('<space>',lambda e: self.start_game())
+		self.root.bind('<Left>', lambda e: self.new_dir([-1,0]))
+		self.root.bind('<Right>',lambda e: self.new_dir([1,0]))
+		self.root.bind('<Up>', 	 lambda e: self.new_dir([0,-1]))
+		self.root.bind('<Down>', lambda e: self.new_dir([0,1]))
 		
 		self.root.mainloop()
 		
@@ -31,34 +32,38 @@ class Application:
 		if self.run == False:
 			self.run 	= True
 			self.count 	= 0
-			self.speed 	= linear(100, 50, -(50 / self.win_con))
 			
-			self.l['text'] = 'Score: 0/' + str(self.win_con)
+			self.step 	=  50 / self.win_con
+			self.speed 	= 100
+			
+			self.l['text'] 	= 'Score: 0/' + str(self.win_con)
 			
 			self.snake_init()
 			self.food_init()
 			self.update()
 		
 	def snake_init( self ):
-		self.head 		= [self.center,self.center]
-		self.body 		= [self.self.scale_init( self.head )]
+		self.head 	= [self.center,self.center]
+		self.body 	= [self.scale_init( self.head )]
 		self.body_pos	= [self.head]
-		self.dir 		= [0,1]
+		self.dir 	= [0,1]
 	
 	def update( self ):
+		if not self.queue.empty():
+			self.dir = self.queue.get()
+		
 		self.head = [x + (y * self.b_dim) for x, y in zip( self.head, self.dir )]
 		
 		if not ( 0 <= self.head[0] <= self.bound ) or not ( 0 <= self.head[1] <= self.bound ) or self.head in self.body_pos:
-			
 			self.reset( 'lose' )
-		
 		else:
-			self.body.insert( 0, self.self.scale_init( self.head ) )
+			self.body.insert( 0, self.scale_init( self.head ) )
 			self.body_pos.insert( 0, self.head )
 			
 			if self.head == self.f_pos:
 				self.c.delete( self.food )
 				self.count += 1
+				self.speed -= self.step
 				self.l['text'] = 'Score: ' + str(self.count) + '/' + str(self.win_con)
 				
 				if self.count != self.win_con:
@@ -70,11 +75,11 @@ class Application:
 				self.body_pos.pop()
 
 			if self.run == True:
-				self.c.after( int(self.speed[self.count]), self.update )
+				self.c.after( int(self.speed) , self.update )
 			
 	def new_dir( self, vector ):
 		if self.dir != [ -x for x in vector ]:
-			self.dir = vector
+			self.queue.put(vector)
 
 	def scale_init( self, pos ):	
 		self.scale = self.c.create_rectangle( 
@@ -89,8 +94,8 @@ class Application:
 		while True:
 			loc = [randrange(0, self.bound, self.b_dim), randrange(0, self.bound, self.b_dim)]
 			if not loc in self.body_pos:
-				self.f_pos 	= loc
-				self.food 	= self.c.create_rectangle(
+				self.f_pos = loc
+				self.food  = self.c.create_rectangle(
 					self.f_pos[0], 
 					self.f_pos[1], 
 					self.f_pos[0] + self.b_dim, 
