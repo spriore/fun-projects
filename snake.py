@@ -10,7 +10,7 @@ class Application:
 		self.bound 	= self.c_dim - self.b_dim
 		self.center 	= int( self.scale / 2 ) * self.b_dim
 		self.win_con	= self.scale**2 - 1
-		self.run 		= False
+		self.run 	= False
 		
 		self.root 	= tk.Tk()
 		self.l 		= tk.Label(self.root, anchor = 'n', fg = '#000000', text = 'Press spacebar to start.')	
@@ -32,8 +32,7 @@ class Application:
 		if self.run == False:
 			self.run 	= True
 			self.count 	= 0
-			
-			self.step 	=  50 / self.win_con
+			self.step 	= 50 / self.win_con
 			self.speed 	= 100
 			
 			self.l['text'] 	= 'Score: 0/' + str(self.win_con)
@@ -47,6 +46,7 @@ class Application:
 		self.body 	= [self.scale_init( self.head )]
 		self.body_pos	= [self.head]
 		self.dir 	= [0,1]
+		self.last_dir   = [0,1]
 	
 	def update( self ):
 		if not self.queue.empty():
@@ -70,16 +70,18 @@ class Application:
 					self.food_init()
 				else:
 					self.reset( 'win' )
+					
 			else:
 				self.c.delete( self.body.pop() )
 				self.body_pos.pop()
-
+			
 			if self.run == True:
 				self.c.after( int(self.speed) , self.update )
 			
 	def new_dir( self, vector ):
-		if self.dir != [ -x for x in vector ]:
+		if self.last_dir != [ -x for x in vector ]:
 			self.queue.put(vector)
+			self.last_dir = vector
 
 	def scale_init( self, pos ):	
 		self.scale = self.c.create_rectangle( 
@@ -102,15 +104,14 @@ class Application:
 					self.f_pos[1] + self.b_dim, 
 					fill = '#871719')
 				break
-				
-	def clear( self ):
-		self.c.delete( self.food )
-		while len( self.body ) > 0:
-			self.c.delete( self.body.pop() )
 	
 	def reset( self, condition ):
 		self.run = False
-		self.clear()
+		
+		self.c.delete( self.food )
+		while len( self.body ) > 0:
+			self.c.delete( self.body.pop() )
+			
 		if condition == 'win':
 			self.l['text'] = 'You Win! Press spacebar to play again.' 
 		else:
